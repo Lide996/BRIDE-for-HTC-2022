@@ -1,5 +1,4 @@
 ## Functions used in "BP Deblur"
-
 import numpy as np
 from scipy import io
 import astra
@@ -8,13 +7,27 @@ from torch.autograd import Variable
 import pylab
 from skimage.transform import resize, rotate
 from skimage.morphology import closing
+from torch.nn import functional as F
 import matlab
 import matlab.engine
-
 
 from model import DeepRFT as myNet
 import sr
 
+def find_mat(data_list):
+    '''
+    Find files with .mat format.
+    Input:
+        data_list: file names
+    Output:
+        tmp: name of mat files 
+    '''
+    tmp=[]
+    for i in range(len(data_list)):
+        tmp_name=data_list[i]
+        if tmp_name[-4:]=='.mat':
+            tmp.append(tmp_name)
+    return tmp 
 
 def BP_reconstruction(Input_signal, angles, result_size=512, \
                       det_width=1.3484, det_count=560, source_origin=410.66, \
@@ -57,7 +70,6 @@ def BP_reconstruction(Input_signal, angles, result_size=512, \
 
     return Bp
 
-
 def Deep_Deblur(Input_albedo, group_number, device,img_resolution=128):
     '''
     Use network to enhance the result of back projection.
@@ -94,9 +106,7 @@ def Deep_Deblur(Input_albedo, group_number, device,img_resolution=128):
     
     return output
 
-
-
-def Load_process(data_path,output_path,group_number):
+def Load_process(data_path, output_path, group_number, temp_output_name):
     '''
     Load data from data path and reconstruct the phantom, then save the results to output path.
     Inputs:
@@ -105,77 +115,41 @@ def Load_process(data_path,output_path,group_number):
         group_number: difficulty level, to determine which pre-trained network to load 
     Output:
         None
-
     '''
-    ##load data
     data=io.loadmat(data_path)['CtDataLimited'] 
-    ##extract information from data
     sinogram=data['sinogram'][0][0]
-    
-    parameters=data['parameters'][0][0][0][0]  
-      
+    parameters=data['parameters'][0][0][0][0]
     eff_pixel_size=parameters['effectivePixelSizePost'][0][0]
     det_width=parameters['geometricMagnification'][0][0]
     det_count=parameters['numDetectorsPost'][0][0]
-
     angles=parameters['angles'][0]
-
     source_origin=parameters['distanceSourceOrigin'][0][0]
     origin_det=parameters['distanceSourceDetector'][0][0]-source_origin
-
-    output_size=512
     deblur_size=128
-    
-    ##detecting device
+    output_size=512
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('running on ',device)
-    
-    ##let the angles start from 0
     angle_min=np.min(angles)
     angles=angles-angle_min
-    
-    ##back projection
-    BP=BP_reconstruction(sinogram,angles,result_size=output_size, det_width=det_width, det_count=det_count, source_origin=source_origin, origin_det=origin_det, eff_pixelsize=eff_pixel_size)
 
-    
-
-    ##deblur
+    # --------------------------------------------------------------------------------------------
+    # BP
+    BP=BP_reconstruction(sinogram,angles,result_size=output_size,\
+                        det_width=det_width, det_count=det_count, source_origin=source_origin,\
+                        origin_det=origin_det, eff_pixelsize=eff_pixel_size)
+    # --------------------------------------------------------------------------------------------
+    # inv_Gram
     BP=resize(BP,output_shape=(deblur_size, deblur_size))
     result=Deep_Deblur(BP,group_number,device)
-    ##clear gpu memory
     torch.cuda.empty_cache()
-    ##super resolution
     SR=sr.super_resolution(result,device)
-
-    ##totate the reconstruction to original orientation
-    SR=rotate(SR,angle_min,order=0)    
-
-    
-    #pylab.imsave('BP.png',BP)
-    #pylab.imsave('Deblur.png',result)
-    
-    ##to matlab solver
+    SR=rotate(SR,angle_min,order=0)
+    # --------------------------------------------------------------------------------------------
+    # Boundary refinement
     io.savemat('./temp/tmp_result.mat',{'u_hat':SR,'CtDataLimited':data},do_compression=True)
-    eng=matlab.engine.start_matlab()
+    eng = matlab.engine.start_matlab()
     eng.solver(nargout=0)
-    final=io.loadmat('./temp/final_result.mat')['u']
-    ##save results
+    SR = io.loadmat('./temp/final_result.mat')['u']
     pylab.gray()
-    pylab.imsave(output_path,final)
-    return 
-
-def find_mat(data_list):
-    '''
-    Find files with .mat format.
-    Input:
-        data_list: file names
-    Output:
-        tmp: name of mat files 
-    '''
-    tmp=[]
-    for i in range(len(data_list)):
-        tmp_name=data_list[i]
-        if tmp_name[-4:]=='.mat':
-            tmp.append(tmp_name)
-    return tmp 
-
+    pylab.imsave(output_path,SR)
+    return

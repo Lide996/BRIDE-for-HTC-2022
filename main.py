@@ -35,6 +35,4 @@ if __name__ == "__main__":
         data_path=data_folder+load_file_name
         output_path=output_folder+output_file_name
         ##reconstruct
-        funcs.Load_process(data_path,output_path,group_number)        
-    
-
+        funcs.Load_process(data_path,output_path,group_number,load_file_name[0:-4])
