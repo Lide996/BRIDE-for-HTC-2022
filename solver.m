@@ -15,7 +15,7 @@ amp_const = (Sig_hat(:)' * sub_Sig(:)) / (Sig_hat(:)' * Sig_hat(:));
 u_hat = amp_const * u_hat; Sig_hat = amp_const * Sig_hat;
 max_u_hat = max(u_hat(:));
 u = u_hat; b_u = forward(A, u, num_meas, num_bin);
-Upper_bound = Upper_bound_ratio * max(u(:));
+Upper_bound = max(u(:));
 %% 1.3 Iteration
 err_data = sum((b_u(:) - sub_Sig(:)).^2);
 err_u = err_u_imp * sum(u(:).^2);
@@ -44,8 +44,8 @@ end
 boundary = get_boundary(u_hat);
 change_rate = (v - u_hat) / max(u_hat(:));
 u = u_hat;
-u(boundary == 1 & change_rate >= change_thresh) = max_u_hat;
-u(boundary == 1 & change_rate <= -change_thresh) = 0;
+u(boundary == 1 & change_rate >= 0.1) = max_u_hat;
+u(boundary == 1 & change_rate <= -0.1) = 0;
 boundary = ext_boundary(boundary);
 u(boundary == 1 & change_rate >= 0.3) = max_u_hat;
 u(boundary == 1 & change_rate <= -0.3) = 0;
