@@ -103,9 +103,9 @@ and check the `output` folder. The reconstruction is `a_1.png`.
 
 | Opening angle |                         Ground truth                         |                            BRIDE                             |
 | :-----------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
-|      30°      | <img src="./README.assets/gt_a.png" alt="gt_a" style="zoom:33%;" /> | <img src="./README.assets/a_1-1667487961157-3.png" alt="a_1" style="zoom:33%;" /> |
+|      30°      | <img src="./README.assets/gt_a.png" alt="gt_a" style="zoom:33%;" /> | <img src="./README.assets/a_1.png" alt="a_1" style="zoom:33%;" /> |
 
-The Matthews correlation coefficient is 0.9234.
+The Matthews correlation coefficient is 0.9237.
 
 ## tl;dr
 
