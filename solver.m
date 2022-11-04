@@ -53,7 +53,7 @@ boundary = ext_boundary(boundary);
 u(boundary == 1 & change_rate >= 0.5) = max_u_hat;
 u(boundary == 1 & change_rate <= -0.5) = 0;
 %%
-u = 1 - get_bin(u,0.5);
+u = get_bin(u,0.5);
 cd('./temp')
 save final_result u
 cd ..
